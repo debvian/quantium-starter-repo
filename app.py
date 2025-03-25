@@ -1,76 +1,118 @@
-import dash
-from dash import dcc, html, Input, Output
-import pandas as pd
-import plotly.express as px
+import pandas
+from dash import Dash, html, dcc, Input, Output
+from plotly.express import line
 
-# Load the processed sales data
-df = pd.read_csv("data/final_sales.csv")
+# Path to the formatted data file
+DATA_PATH = "./formatted_data.csv"
 
-# Debugging: Print the first few rows to verify
-print("📊 Loaded Data:")
-print(df.head())
+# Colors for theme
+COLORS = {
+    "primary": "#FCE4EC",  # Light pink background
+    "secondary": "#AD1457",  # Dark pink/maroon
+    "font": "#311B92",  # Dark purple text
+    "accent": "#FF4081"  # Vibrant pink accent
+}
 
-df["date"] = pd.to_datetime(df["date"])
+# Load in data
+data = pandas.read_csv(DATA_PATH)
+data = data.sort_values(by="date")
 
-# Create a Dash app
-app = dash.Dash(__name__)
+# Initialize Dash app
+dash_app = Dash(__name__)
 
-# Define app layout
-app.layout = html.Div(children=[
-    html.H1("Pink Morsel Sales Dashboard", style={'textAlign': 'center', 'color': '#ff4c4c'}),
 
-    # Region Selection Radio Button
-    html.Label("Select Region:", style={'font-size': '18px', 'font-weight': 'bold'}),
-    dcc.RadioItems(
-        id='region-filter',
-        options=[
-            {'label': 'All', 'value': 'all'},
-            {'label': 'North', 'value': 'north'},
-            {'label': 'East', 'value': 'east'},
-            {'label': 'South', 'value': 'south'},
-            {'label': 'West', 'value': 'west'}
-        ],
-        value='all',  # Default selection
-        inline=True,
-        style={'margin-bottom': '20px'}
-    ),
-
-    # Line Chart
-    dcc.Graph(id='sales-line-chart'),
-
-    # Note about price increase
-    html.P("🔺 Price Increase on January 15, 2021",
-           style={'textAlign': 'center', 'font-weight': 'bold', 'color': '#ff0000'})
-])
-
-# Define callback to update chart based on selected region
-@app.callback(
-    Output('sales-line-chart', 'figure'),
-    Input('region-filter', 'value')
-)
-def update_chart(selected_region):
-    filtered_df = df if selected_region == 'all' else df[df['region'].str.lower() == selected_region.lower()]
-
-    fig = px.line(
-        filtered_df,
-        x="date",
-        y="sales",
-        color="region",
-        title="Sales Over Time",
-        labels={"date": "Date", "sales": "Total Sales", "region": "Region"},
-        markers=True
-    )
-
-    fig.update_layout(
+# Create the visualization
+def generate_figure(chart_data):
+    line_chart = line(chart_data, x="date", y="sales", title="Pink Morsel Sales")
+    line_chart.update_layout(
+        plot_bgcolor=COLORS["primary"],
+        paper_bgcolor=COLORS["secondary"],
+        font_color=COLORS["font"],
+        title_x=0.5,  # Center title
         xaxis_title="Date",
         yaxis_title="Sales",
-        plot_bgcolor="#f9f9f9",
-        paper_bgcolor="#ffffff",
-        font=dict(family="Arial", size=14),
+        xaxis=dict(showgrid=False),
+        yaxis=dict(showgrid=True, gridcolor="#FFC1E3"),  # Soft grid color
     )
+    return line_chart
 
-    return fig
+
+visualization = dcc.Graph(
+    id="visualization",
+    figure=generate_figure(data),
+    style={"border-radius": "15px", "padding": "10px", "background-color": COLORS["primary"]}
+)
+
+# Create the header
+header = html.H1(
+    "Pink Morsel Sales Dashboard",
+    id="header",
+    style={
+        "background-color": COLORS["secondary"],
+        "color": "white",
+        "border-radius": "15px",
+        "padding": "15px",
+        "margin-bottom": "20px",
+        "box-shadow": "0px 4px 8px rgba(0, 0, 0, 0.2)"
+    }
+)
+
+# Region picker
+region_picker = dcc.RadioItems(
+    ["north", "east", "south", "west", "all"],
+    "all",
+    id="region_picker",
+    inline=True,
+    style={
+        "color": COLORS["font"],
+        "font-size": "18px",
+        "font-weight": "bold",
+        "margin-bottom": "15px"
+    }
+)
+
+region_picker_wrapper = html.Div(
+    [html.Label("Select Region:", style={"font-size": "20px", "color": COLORS["font"], "font-weight": "bold"}),
+     region_picker],
+    style={"padding": "10px", "border-radius": "10px", "background-color": COLORS["primary"]}
+)
+
+
+# Define the region picker callback
+@dash_app.callback(
+    Output("visualization", "figure"),
+    Input("region_picker", "value")
+)
+def update_graph(region):
+    # Filter the dataset
+    if region == "all":
+        trimmed_data = data
+    else:
+        trimmed_data = data[data["region"] == region]
+
+    # Generate a new line chart with the filtered data
+    figure = generate_figure(trimmed_data)
+    return figure
+
+
+# Define the app layout
+dash_app.layout = html.Div(
+    [
+        header,
+        region_picker_wrapper,
+        visualization
+    ],
+    style={
+        "textAlign": "center",
+        "background-color": COLORS["primary"],
+        "border-radius": "20px",
+        "padding": "20px",
+        "max-width": "800px",
+        "margin": "auto",
+        "box-shadow": "0px 4px 10px rgba(0, 0, 0, 0.2)"
+    }
+)
 
 # Run the app
 if __name__ == '__main__':
-    app.run(debug=True)
+    dash_app.run()
