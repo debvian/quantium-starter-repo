@@ -3,10 +3,13 @@ from dash import dcc, html, Input, Output
 import pandas as pd
 import plotly.express as px
 
-# Load the sales data
+# Load the processed sales data
 df = pd.read_csv("data/final_sales.csv")
 
-# Convert 'date' column to datetime format
+# Debugging: Print the first few rows to verify
+print("📊 Loaded Data:")
+print(df.head())
+
 df["date"] = pd.to_datetime(df["date"])
 
 # Create a Dash app
@@ -14,9 +17,7 @@ app = dash.Dash(__name__)
 
 # Define app layout
 app.layout = html.Div(children=[
-
-    # Header
-    html.H1("Pink Morsel Sales Dashboard", style={'textAlign': 'center', 'color': '#ff4c4c', 'margin-bottom': '20px'}),
+    html.H1("Pink Morsel Sales Dashboard", style={'textAlign': 'center', 'color': '#ff4c4c'}),
 
     # Region Selection Radio Button
     html.Label("Select Region:", style={'font-size': '18px', 'font-weight': 'bold'}),
@@ -40,9 +41,7 @@ app.layout = html.Div(children=[
     # Note about price increase
     html.P("🔺 Price Increase on January 15, 2021",
            style={'textAlign': 'center', 'font-weight': 'bold', 'color': '#ff0000'})
-
-], style={'width': '80%', 'margin': 'auto', 'font-family': 'Arial'})
-
+])
 
 # Define callback to update chart based on selected region
 @app.callback(
@@ -71,7 +70,6 @@ def update_chart(selected_region):
     )
 
     return fig
-
 
 # Run the app
 if __name__ == '__main__':
